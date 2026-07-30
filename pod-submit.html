@@ -358,10 +358,16 @@ document.getElementById('logoutBtn').addEventListener('click', doLogout);
 
 // กู้คืน session ถ้าเคยเข้าสู่ระบบไว้ (ในแท็บเดียวกัน)
 (function restoreSession(){
+  let restored = false;
   try {
     const saved = sessionStorage.getItem(SESSION_KEY);
-    if(saved){ enterApp(JSON.parse(saved)); }
+    if(saved){ enterApp(JSON.parse(saved)); restored = true; }
   } catch(e){}
+  if(!restored){
+    // ยังไม่ได้เข้าสู่ระบบ → แสดงหน้า login
+    loginwrap.classList.add('show');
+    appEl.classList.add('hide');
+  }
 })();
 
 // ---- ส่งข้อมูลบันทึก: fetch แบบ no-cors (ส่งได้ แต่อ่านผลไม่ได้ จึงยืนยันด้วย JSONP) ----
