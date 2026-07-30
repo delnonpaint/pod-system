@@ -85,6 +85,8 @@
   #loginBtn:disabled{background:#A8ADB4;cursor:not-allowed;}
   .loginerr{font-size:13px;color:var(--danger);background:#FBEDE9;border:1px solid #EFC9BE;border-radius:8px;padding:9px 11px;margin-bottom:16px;display:none;}
   .loginerr.show{display:block;}
+  .rememberrow{display:flex;align-items:center;gap:8px;margin:2px 0 16px;cursor:pointer;font-size:13.5px;color:var(--ink-soft);user-select:none;}
+  .rememberrow input{width:17px;height:17px;accent-color:var(--amber-deep);cursor:pointer;}
 
   /* logged-in header (who am I + logout) */
   .userbar{display:flex;align-items:center;justify-content:space-between;background:var(--paper-card);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:16px;}
@@ -113,8 +115,12 @@
     </div>
     <div class="field">
       <label>รหัสผ่าน</label>
-      <input type="password" id="loginPass" autocomplete="current-password" placeholder="รหัสผ่าน">
+      <input type="password" id="loginPass" autocomplete="current-password" placeholder="รหัสผ่าน 4-8 ตัว" maxlength="8">
     </div>
+    <label class="rememberrow">
+      <input type="checkbox" id="rememberMe">
+      <span>จำการเข้าสู่ระบบไว้ในเครื่องนี้</span>
+    </label>
     <button id="loginBtn" type="button">
       <span class="spinner" id="loginSpinner"></span>
       <span id="loginLabel">เข้าสู่ระบบ</span>
@@ -307,6 +313,7 @@ function jsonp(url, params){
 
 // ---- ระบบเข้าสู่ระบบ ----
 const SESSION_KEY = 'pod_session';
+const rememberMe = document.getElementById('rememberMe');
 
 function showLoginErr(msg){ loginErr.textContent = msg; loginErr.classList.add('show'); }
 function clearLoginErr(){ loginErr.classList.remove('show'); loginErr.textContent=''; }
@@ -319,10 +326,31 @@ function enterApp(sess){
   appEl.classList.remove('hide');
 }
 
+function saveSession(sess, remember){
+  // remember = true → localStorage (ค้างถาวรแม้ปิดเบราว์เซอร์)
+  // remember = false → sessionStorage (หายเมื่อปิดแท็บ)
+  try {
+    if(remember){ localStorage.setItem(SESSION_KEY, JSON.stringify(sess)); sessionStorage.removeItem(SESSION_KEY); }
+    else { sessionStorage.setItem(SESSION_KEY, JSON.stringify(sess)); localStorage.removeItem(SESSION_KEY); }
+  } catch(e){}
+}
+
+function readSavedSession(){
+  try {
+    const l = localStorage.getItem(SESSION_KEY);
+    if(l){ return JSON.parse(l); }
+  } catch(e){}
+  try {
+    const s = sessionStorage.getItem(SESSION_KEY);
+    if(s){ return JSON.parse(s); }
+  } catch(e){}
+  return null;
+}
+
 function doLogout(){
   session = null;
-  try { sessionStorage.removeItem(SESSION_KEY); } catch(e){}
-  loginUser.value=''; loginPass.value=''; clearLoginErr();
+  try { sessionStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_KEY); } catch(e){}
+  loginUser.value=''; loginPass.value=''; if(rememberMe) rememberMe.checked=false; clearLoginErr();
   appEl.classList.add('hide');
   loginwrap.classList.add('show');
 }
@@ -332,6 +360,7 @@ async function doLogin(){
   const u = loginUser.value.trim();
   const pw = loginPass.value;
   if(!u || !pw){ showLoginErr('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'); return; }
+  if(pw.length < 4 || pw.length > 8){ showLoginErr('รหัสผ่านต้องมี 4-8 ตัวอักษร'); loginPass.focus(); return; }
   if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('script.google.com') === -1){
     showLoginErr('ยังไม่ได้ตั้งค่า Backend (ดูคู่มือตั้งค่า.md)'); return;
   }
@@ -340,7 +369,7 @@ async function doLogin(){
     const res = await jsonp(APPS_SCRIPT_URL, { action: 'login', username: u, password: pw });
     if(res && res.success){
       const sess = { username: u, password: pw, carrier: res.carrier };
-      try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(sess)); } catch(e){}
+      saveSession(sess, rememberMe && rememberMe.checked);
       enterApp(sess);
     } else {
       showLoginErr((res && res.error) ? res.error : 'เข้าสู่ระบบไม่สำเร็จ');
@@ -356,18 +385,11 @@ loginBtn.addEventListener('click', doLogin);
 loginPass.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') doLogin(); });
 document.getElementById('logoutBtn').addEventListener('click', doLogout);
 
-// กู้คืน session ถ้าเคยเข้าสู่ระบบไว้ (ในแท็บเดียวกัน)
+// กู้คืน session ถ้าเคยเข้าสู่ระบบไว้ (จาก localStorage หรือ sessionStorage)
 (function restoreSession(){
-  let restored = false;
-  try {
-    const saved = sessionStorage.getItem(SESSION_KEY);
-    if(saved){ enterApp(JSON.parse(saved)); restored = true; }
-  } catch(e){}
-  if(!restored){
-    // ยังไม่ได้เข้าสู่ระบบ → แสดงหน้า login
-    loginwrap.classList.add('show');
-    appEl.classList.add('hide');
-  }
+  const saved = readSavedSession();
+  if(saved){ enterApp(saved); }
+  else { loginwrap.classList.add('show'); appEl.classList.add('hide'); }
 })();
 
 // ---- ส่งข้อมูลบันทึก: fetch แบบ no-cors (ส่งได้ แต่อ่านผลไม่ได้ จึงยืนยันด้วย JSONP) ----
