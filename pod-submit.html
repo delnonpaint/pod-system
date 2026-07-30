@@ -65,9 +65,66 @@
   .again{margin-top:26px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);font-family:'Oswald',sans-serif;font-weight:600;font-size:15px;padding:12px 22px;border-radius:10px;cursor:pointer;}
   .again:active{background:var(--ink);color:#fff;}
   .foot{text-align:center;margin-top:18px;font-size:11.5px;color:var(--slate);}
+
+  /* login screen */
+  .loginwrap{max-width:400px;margin:0 auto;padding:60px 16px 40px;display:none;}
+  .loginwrap.show{display:block;}
+  .app.hide{display:none;}
+  .loginbrand{text-align:center;margin-bottom:28px;}
+  .loginbrand .mk{width:56px;height:56px;border-radius:12px;background:var(--ink);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;}
+  .loginbrand .mk svg{width:30px;height:30px;}
+  .loginbrand .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber-deep);font-weight:600;}
+  .loginbrand h1{font-family:'Oswald',sans-serif;font-weight:600;font-size:23px;margin:2px 0 0;}
+  .logincard{background:var(--paper-card);border:1px solid var(--line);border-radius:14px;padding:24px 20px;box-shadow:0 1px 2px rgba(27,36,48,.04),0 8px 24px -12px rgba(27,36,48,.12);}
+  .logincard .field{margin-bottom:16px;}
+  .logincard label{display:block;font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;}
+  .logincard input{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px 13px;font-size:15.5px;font-family:'Inter',sans-serif;background:#FCFBF8;color:var(--ink);}
+  .logincard input:focus{outline:none;border-color:var(--amber);background:#fff;}
+  #loginBtn{width:100%;border:none;border-radius:12px;background:var(--ink);color:#fff;font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;letter-spacing:.03em;padding:14px;cursor:pointer;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:9px;}
+  #loginBtn:active{transform:scale(.98);}
+  #loginBtn:disabled{background:#A8ADB4;cursor:not-allowed;}
+  .loginerr{font-size:13px;color:var(--danger);background:#FBEDE9;border:1px solid #EFC9BE;border-radius:8px;padding:9px 11px;margin-bottom:16px;display:none;}
+  .loginerr.show{display:block;}
+
+  /* logged-in header (who am I + logout) */
+  .userbar{display:flex;align-items:center;justify-content:space-between;background:var(--paper-card);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:16px;}
+  .userbar .who{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--ink-soft);}
+  .userbar .who svg{color:var(--stamp-green);}
+  .logoutBtn{background:none;border:none;color:var(--slate);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline;padding:4px;}
+  #carrierName[readonly]{background:#F2EFE7;color:var(--ink-soft);cursor:not-allowed;}
 </style>
 </head>
 <body>
+
+<!-- ===== หน้าเข้าสู่ระบบ ===== -->
+<div class="loginwrap" id="loginwrap">
+  <div class="loginbrand">
+    <div class="mk">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M3 7L12 3L21 7V17L12 21L3 17V7Z" stroke="#F6F4EE" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 7L12 11L21 7" stroke="#E8960A" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 11V21" stroke="#F6F4EE" stroke-width="1.6"/></svg>
+    </div>
+    <div class="eyebrow">Proof of Delivery</div>
+    <h1>เข้าสู่ระบบขนส่ง</h1>
+  </div>
+  <div class="logincard">
+    <div class="loginerr" id="loginErr"></div>
+    <div class="field">
+      <label>ชื่อผู้ใช้</label>
+      <input type="text" id="loginUser" autocomplete="username" placeholder="ชื่อผู้ใช้">
+    </div>
+    <div class="field">
+      <label>รหัสผ่าน</label>
+      <input type="password" id="loginPass" autocomplete="current-password" placeholder="รหัสผ่าน">
+    </div>
+    <button id="loginBtn" type="button">
+      <span class="spinner" id="loginSpinner"></span>
+      <span id="loginLabel">เข้าสู่ระบบ</span>
+    </button>
+  </div>
+  <div class="foot">ติดต่อผู้ดูแลระบบหากลืมรหัสผ่าน หรือยังไม่มีบัญชี</div>
+</div>
+
+<!-- ===== แอปหลัก (แสดงหลังเข้าสู่ระบบ) ===== -->
+<div class="app hide" id="app">
 <div class="wrap">
   <div class="brandbar">
     <div class="brandmark">
@@ -79,6 +136,14 @@
     </div>
   </div>
 
+  <div class="userbar">
+    <div class="who">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 20C4 16.6863 7.58172 14 12 14C16.4183 14 20 16.6863 20 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span id="whoami">-</span>
+    </div>
+    <button class="logoutBtn" id="logoutBtn" type="button">ออกจากระบบ</button>
+  </div>
+
   <div class="slip">
     <div class="tag" id="topTag">รอกรอกข้อมูล</div>
     <div class="slip-inner">
@@ -86,11 +151,11 @@
       <form id="mainform" class="mainform">
         <div class="field">
           <label>ชื่อขนส่ง <span class="req">*</span></label>
-          <input type="text" id="carrierName" placeholder="เช่น ไปรษณีย์ไทย, Kerry, Flash, J&T" autocomplete="off">
+          <input type="text" id="carrierName" placeholder="ชื่อขนส่ง" autocomplete="off" readonly>
         </div>
         <div class="field">
           <label>เลขที่บิล <span class="req">*</span></label>
-          <input type="text" id="billNo" placeholder="เช่น BILL-00123" autocomplete="off">
+          <input type="text" id="billNo" placeholder="เช่น 500XXXXXXX" autocomplete="off">
         </div>
         <div class="field">
           <label>วันที่ส่งงาน <span class="req">*</span></label>
@@ -104,7 +169,7 @@
         </div>
         <div class="field" style="margin-bottom:4px;">
           <label>หมายเหตุ <span class="opt">(ถ้ามี)</span></label>
-          <textarea id="note" placeholder="เช่น ฝากไว้ที่ป้อมยาม, ลูกค้าไม่อยู่รับเอง"></textarea>
+          <textarea id="note" placeholder="เช่น สินค้าเสียหาย, ลูกค้าไม่สะดวกรับ"></textarea>
         </div>
       </form>
 
@@ -128,12 +193,13 @@
     </button>
   </div>
 </div>
+</div><!-- /.app -->
 
 <script>
 // ===================================================================
 //  ตั้งค่า URL ของ Google Apps Script Web App ตรงนี้ (ดูคู่มือตั้งค่า.md)
 // ===================================================================
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx6EIg_EQLAKTCKFaVDlMRgrfb6XMm6qaDE2c-tAtlsZcdyoCVKZs0jUKJ50Nzp7HG4jg/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyjAzhd7EvO3hEmFBagEZ0VvIdCuUSw-S2D1iwj2X-tbLNaHXuCIuo9Z6d0Kru0yUme/exec";
 
 const MAX_PHOTOS = 5;
 let photos = [];
@@ -147,6 +213,18 @@ const billNo = document.getElementById('billNo');
 const deliveryDate = document.getElementById('deliveryDate');
 const note = document.getElementById('note');
 const topTag = document.getElementById('topTag');
+
+// ===== สถานะการเข้าสู่ระบบ =====
+let session = null; // { username, password, carrier }
+const loginwrap = document.getElementById('loginwrap');
+const appEl = document.getElementById('app');
+const loginUser = document.getElementById('loginUser');
+const loginPass = document.getElementById('loginPass');
+const loginBtn = document.getElementById('loginBtn');
+const loginErr = document.getElementById('loginErr');
+const loginSpinner = document.getElementById('loginSpinner');
+const loginLabel = document.getElementById('loginLabel');
+const whoami = document.getElementById('whoami');
 
 deliveryDate.value = new Date().toISOString().slice(0,10);
 
@@ -227,6 +305,65 @@ function jsonp(url, params){
   });
 }
 
+// ---- ระบบเข้าสู่ระบบ ----
+const SESSION_KEY = 'pod_session';
+
+function showLoginErr(msg){ loginErr.textContent = msg; loginErr.classList.add('show'); }
+function clearLoginErr(){ loginErr.classList.remove('show'); loginErr.textContent=''; }
+
+function enterApp(sess){
+  session = sess;
+  whoami.textContent = sess.carrier;
+  carrierName.value = sess.carrier;
+  loginwrap.classList.remove('show');
+  appEl.classList.remove('hide');
+}
+
+function doLogout(){
+  session = null;
+  try { sessionStorage.removeItem(SESSION_KEY); } catch(e){}
+  loginUser.value=''; loginPass.value=''; clearLoginErr();
+  appEl.classList.add('hide');
+  loginwrap.classList.add('show');
+}
+
+async function doLogin(){
+  clearLoginErr();
+  const u = loginUser.value.trim();
+  const pw = loginPass.value;
+  if(!u || !pw){ showLoginErr('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'); return; }
+  if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('script.google.com') === -1){
+    showLoginErr('ยังไม่ได้ตั้งค่า Backend (ดูคู่มือตั้งค่า.md)'); return;
+  }
+  loginBtn.disabled = true; loginSpinner.classList.add('show'); loginLabel.textContent='กำลังตรวจสอบ...';
+  try {
+    const res = await jsonp(APPS_SCRIPT_URL, { action: 'login', username: u, password: pw });
+    if(res && res.success){
+      const sess = { username: u, password: pw, carrier: res.carrier };
+      try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(sess)); } catch(e){}
+      enterApp(sess);
+    } else {
+      showLoginErr((res && res.error) ? res.error : 'เข้าสู่ระบบไม่สำเร็จ');
+    }
+  } catch(err){
+    showLoginErr('เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่');
+  } finally {
+    loginBtn.disabled = false; loginSpinner.classList.remove('show'); loginLabel.textContent='เข้าสู่ระบบ';
+  }
+}
+
+loginBtn.addEventListener('click', doLogin);
+loginPass.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') doLogin(); });
+document.getElementById('logoutBtn').addEventListener('click', doLogout);
+
+// กู้คืน session ถ้าเคยเข้าสู่ระบบไว้ (ในแท็บเดียวกัน)
+(function restoreSession(){
+  try {
+    const saved = sessionStorage.getItem(SESSION_KEY);
+    if(saved){ enterApp(JSON.parse(saved)); }
+  } catch(e){}
+})();
+
 // ---- ส่งข้อมูลบันทึก: fetch แบบ no-cors (ส่งได้ แต่อ่านผลไม่ได้ จึงยืนยันด้วย JSONP) ----
 function sendData(url, payload){
   return fetch(url, {
@@ -243,11 +380,10 @@ const submitLabel = document.getElementById('submitLabel');
 
 submitBtn.addEventListener('click', async () => {
   clearError();
-  const carrier = carrierName.value.trim();
+  if(!session){ showError('กรุณาเข้าสู่ระบบก่อน'); doLogout(); return; }
   const bill = billNo.value.trim();
   const date = deliveryDate.value;
 
-  if(!carrier){ showError('กรุณากรอกชื่อขนส่ง'); carrierName.focus(); return; }
   if(!bill){ showError('กรุณากรอกเลขที่บิล'); billNo.focus(); return; }
   if(!date){ showError('กรุณาเลือกวันที่ส่งงาน'); deliveryDate.focus(); return; }
   if(photos.length === 0){ showError('กรุณาแนบรูปภาพหลักฐานอย่างน้อย 1 รูป'); return; }
@@ -262,9 +398,11 @@ submitBtn.addEventListener('click', async () => {
 
   try {
     // 1) ส่งข้อมูล (no-cors: อ่านผลไม่ได้ แต่ข้อมูลถูกส่งถึง Backend)
+    //    ส่ง username/password ไปด้วย เพื่อให้ Backend ยืนยันตัวตน + ใช้ชื่อขนส่งจากบัญชี
     await sendData(APPS_SCRIPT_URL, {
-      action: 'submit', carrier: carrier, billNo: bill,
-      deliveryDate: date, note: note.value.trim(), images: photos
+      action: 'submit',
+      username: session.username, password: session.password,
+      billNo: bill, deliveryDate: date, note: note.value.trim(), images: photos
     });
 
     // 2) ยืนยันด้วย JSONP ว่าแถวถูกบันทึกจริง + ดึงเลขอ้างอิง (ลองซ้ำเผื่อ Backend ยังประมวลผลอยู่)
@@ -298,8 +436,9 @@ submitBtn.addEventListener('click', async () => {
 });
 
 document.getElementById('againBtn').addEventListener('click', () => {
-  carrierName.value=''; billNo.value=''; deliveryDate.value=new Date().toISOString().slice(0,10);
+  billNo.value=''; deliveryDate.value=new Date().toISOString().slice(0,10);
   note.value=''; photos=[]; renderGrid(); updateTag();
+  if(session){ carrierName.value = session.carrier; } // คงชื่อขนส่งที่ล็อกอินไว้
   document.getElementById('mainform').classList.remove('hide');
   document.getElementById('submitbar').style.display='block';
   document.getElementById('successwrap').classList.remove('show');
