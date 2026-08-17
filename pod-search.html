@@ -7,21 +7,33 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{--ink:#1B2430;--ink-soft:#2C3847;--paper:#F6F4EE;--paper-card:#FFFFFF;--amber:#E8960A;--amber-deep:#C97C05;--stamp-green:#2E6B4F;--slate:#6B7680;--line:#D9D4C6;--danger:#B3432E;}
+  :root{
+    --ink:#47424E; --ink-soft:#6B6572; --paper:#F7F2F4; --paper-card:#FFFFFF;
+    --amber:#F2B8A2; --amber-deep:#C46A52; --stamp-green:#4E8A72; --slate:#8B8592;
+    --line:#ECE5E8; --danger:#C25E48;
+  }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{background:var(--paper);font-family:'Inter',system-ui,sans-serif;color:var(--ink);min-height:100vh;}
   .wrap{max-width:760px;margin:0 auto;padding:22px 16px 60px;}
   .brandbar{display:flex;align-items:center;gap:10px;padding:6px 4px 22px;}
-  .brandmark{width:38px;height:38px;border-radius:8px;background:var(--ink);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .brandmark{width:38px;height:38px;border-radius:8px;background:var(--ink);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;}
   .brandmark svg{width:20px;height:20px;}
+  .brandmark img.brandlogo,.loginbrand .mk img.brandlogo{width:100%;height:100%;object-fit:contain;padding:3px;background:#fff;}
   .brandtext .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber-deep);font-weight:600;}
   .brandtext h1{font-family:'Oswald',sans-serif;font-weight:600;font-size:20px;margin:1px 0 0;}
-  .searchcard{background:var(--paper-card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 1px 2px rgba(27,36,48,.04),0 8px 24px -12px rgba(27,36,48,.1);margin-bottom:22px;}
+
+  /* userbar */
+  .userbar{display:flex;align-items:center;justify-content:space-between;background:var(--paper-card);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:16px;}
+  .userbar .who{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--ink-soft);}
+  .userbar .who svg{color:var(--stamp-green);}
+  .logoutBtn{background:none;border:none;color:var(--slate);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline;padding:4px;}
+
+  .searchcard{background:var(--paper-card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 1px 2px rgba(71,66,78,.04),0 8px 24px -12px rgba(71,66,78,.12);margin-bottom:22px;}
   .searchrow{display:flex;gap:10px;align-items:center;}
   .searchrow svg{flex-shrink:0;color:var(--slate);}
   #searchInput{flex:1;border:none;outline:none;font-size:17px;font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--ink);background:transparent;letter-spacing:.01em;}
-  #searchInput::placeholder{color:#A7ADB3;font-family:'Inter',sans-serif;font-weight:500;}
+  #searchInput::placeholder{color:#B7AEB6;font-family:'Inter',sans-serif;font-weight:500;}
   .clearbtn{background:none;border:none;color:var(--slate);font-size:18px;cursor:pointer;display:none;padding:4px;}
   .clearbtn.show{display:block;}
   .searchmeta{margin-top:10px;font-size:12.5px;color:var(--slate);font-family:'IBM Plex Mono',monospace;padding-left:2px;}
@@ -29,7 +41,7 @@
   .rowcard{background:var(--paper-card);border:1px solid var(--line);border-radius:12px;padding:14px 15px;margin-bottom:9px;cursor:pointer;display:flex;align-items:center;gap:13px;transition:border-color .12s ease,transform .08s ease;}
   .rowcard:active{transform:scale(.99);}
   .rowcard:hover{border-color:var(--amber);}
-  .rowicon{width:38px;height:38px;border-radius:8px;background:#F2EFE7;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:12px;}
+  .rowicon{width:38px;height:38px;border-radius:8px;background:#F5ECEF;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:12px;}
   .rowmain{flex:1;min-width:0;}
   .rowbill{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px;color:var(--ink);}
   .rowsub{font-size:13px;color:var(--slate);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -37,47 +49,116 @@
   .empty{text-align:center;padding:60px 20px;color:var(--slate);}
   .empty svg{margin-bottom:14px;opacity:.5;}
   .empty p{font-size:14.5px;margin:0;}
-  .empty .sub{font-size:13px;margin-top:5px;color:#9BA2A8;}
+  .empty .sub{font-size:13px;margin-top:5px;color:#B0A8B0;}
   .loading{text-align:center;padding:50px 20px;color:var(--slate);font-size:14px;}
-  .spinner{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--amber);animation:spin .7s linear infinite;margin:0 auto 12px;}
+  .spinner{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--amber-deep);animation:spin .7s linear infinite;margin:0 auto 12px;}
   @keyframes spin{to{transform:rotate(360deg);}}
-  .overlay{display:none;position:fixed;inset:0;background:rgba(27,36,48,.55);z-index:50;padding:0;align-items:flex-end;justify-content:center;}
+  .overlay{display:none;position:fixed;inset:0;background:rgba(71,66,78,.5);z-index:50;padding:0;align-items:flex-end;justify-content:center;}
   .overlay.show{display:flex;}
   @media(min-width:640px){.overlay{align-items:center;padding:20px;}}
   .modal{background:var(--paper-card);width:100%;max-width:600px;border-radius:18px 18px 0 0;max-height:92vh;overflow-y:auto;position:relative;}
   @media(min-width:640px){.modal{border-radius:16px;}}
   .modal::before{content:"";display:block;height:5px;background:repeating-linear-gradient(90deg,var(--amber) 0 14px,transparent 14px 24px);}
   .modalhead{padding:18px 20px 4px;position:relative;}
-  .closeBtn{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;background:#F2EFE7;border:none;color:var(--ink-soft);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .closeBtn{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;background:#F5ECEF;border:none;color:var(--ink-soft);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
   .modalbill{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:20px;color:var(--ink);}
   .modalgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:6px 20px 4px;}
   .modalgrid img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;border:1px solid var(--line);cursor:pointer;}
   .detailrows{padding:14px 20px 4px;}
-  .drow{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #EEEBE1;font-size:14px;}
+  .drow{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F1EAED;font-size:14px;}
   .drow:last-child{border-bottom:none;}
   .drow .k{color:var(--slate);}
   .drow .v{font-weight:600;color:var(--ink);text-align:right;max-width:65%;}
-  .notebox{margin:6px 20px 20px;background:#FBF9F4;border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:13.5px;color:var(--ink-soft);line-height:1.5;}
+  .notebox{margin:6px 20px 20px;background:#FBF6F8;border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:13.5px;color:var(--ink-soft);line-height:1.5;}
   .notebox .lbl{font-size:11px;color:var(--slate);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:4px;}
-  .lightbox{display:none;position:fixed;inset:0;background:rgba(10,13,17,.92);z-index:60;align-items:center;justify-content:center;flex-direction:column;padding:20px;}
+  .lightbox{display:none;position:fixed;inset:0;background:rgba(40,36,44,.92);z-index:60;align-items:center;justify-content:center;flex-direction:column;padding:20px;}
   .lightbox.show{display:flex;}
   .lightbox img{max-width:100%;max-height:78vh;border-radius:8px;}
   .lbcontrols{display:flex;gap:16px;margin-top:18px;align-items:center;}
-  .lbbtn{background:rgba(255,255,255,.12);border:none;color:#fff;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;}
-  .lbclose{position:absolute;top:18px;right:18px;background:rgba(255,255,255,.12);color:#fff;border:none;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;}
-  .lbcount{color:#B9BEC3;font-size:12.5px;font-family:'IBM Plex Mono',monospace;margin-top:10px;}
+  .lbbtn{background:rgba(255,255,255,.15);border:none;color:#fff;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;}
+  .lbclose{position:absolute;top:18px;right:18px;background:rgba(255,255,255,.15);color:#fff;border:none;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;}
+  .lbcount{color:#D8D2D6;font-size:12.5px;font-family:'IBM Plex Mono',monospace;margin-top:10px;}
+
+  /* login screen */
+  .loginwrap{max-width:400px;margin:0 auto;padding:60px 16px 40px;display:none;}
+  .loginwrap.show{display:block;}
+  .app.hide{display:none;}
+  .loginbrand{text-align:center;margin-bottom:28px;}
+  .loginbrand .mk{width:56px;height:56px;border-radius:12px;background:var(--ink);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;overflow:hidden;}
+  .loginbrand .mk svg{width:30px;height:30px;}
+  .loginbrand .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber-deep);font-weight:600;}
+  .loginbrand h1{font-family:'Oswald',sans-serif;font-weight:600;font-size:23px;margin:2px 0 0;}
+  .logincard{background:var(--paper-card);border:1px solid var(--line);border-radius:14px;padding:24px 20px;box-shadow:0 1px 2px rgba(71,66,78,.04),0 8px 24px -12px rgba(71,66,78,.12);}
+  .logincard .field{margin-bottom:16px;}
+  .logincard label{display:block;font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;}
+  .logincard input{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:12px 13px;font-size:15.5px;font-family:'Inter',sans-serif;background:#FCFAFB;color:var(--ink);}
+  .logincard input:focus{outline:none;border-color:var(--amber);background:#fff;}
+  #loginBtn{width:100%;border:none;border-radius:12px;background:var(--ink);color:#fff;font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;letter-spacing:.03em;padding:14px;cursor:pointer;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:9px;}
+  #loginBtn:active{transform:scale(.98);}
+  #loginBtn:disabled{background:#B7B0BC;cursor:not-allowed;}
+  .loginerr{font-size:13px;color:var(--danger);background:#FBEEEB;border:1px solid #EFC9C0;border-radius:8px;padding:9px 11px;margin-bottom:16px;display:none;}
+  .loginerr.show{display:block;}
+  .rememberrow{display:flex;align-items:center;gap:8px;margin:2px 0 16px;cursor:pointer;font-size:13.5px;color:var(--ink-soft);user-select:none;}
+  .rememberrow input{width:17px;height:17px;accent-color:var(--amber-deep);cursor:pointer;}
+  .spinner-sm{width:16px;height:16px;border-radius:50%;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite;display:none;}
+  .spinner-sm.show{display:inline-block;}
+  .foot{text-align:center;margin-top:18px;font-size:11.5px;color:var(--slate);}
 </style>
 </head>
 <body>
+
+<!-- ===== หน้าเข้าสู่ระบบ ===== -->
+<div class="loginwrap" id="loginwrap">
+  <div class="loginbrand">
+    <div class="mk">
+      <img class="brandlogo" src="logo.png" alt="TOA" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+      <span style="display:none;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none"><path d="M3 7L12 3L21 7V17L12 21L3 17V7Z" stroke="#FFFFFF" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 7L12 11L21 7" stroke="#F2B8A2" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 11V21" stroke="#FFFFFF" stroke-width="1.6"/></svg></span>
+    </div>
+    <div class="eyebrow">Proof of Delivery</div>
+    <h1>เข้าสู่ระบบ (ดูหลักฐาน)</h1>
+  </div>
+  <div class="logincard">
+    <div class="loginerr" id="loginErr"></div>
+    <div class="field">
+      <label>ชื่อผู้ใช้</label>
+      <input type="text" id="loginUser" autocomplete="username" placeholder="ชื่อผู้ใช้">
+    </div>
+    <div class="field">
+      <label>รหัสผ่าน</label>
+      <input type="password" id="loginPass" autocomplete="current-password" placeholder="รหัสผ่าน 4-8 ตัว" maxlength="8">
+    </div>
+    <label class="rememberrow">
+      <input type="checkbox" id="rememberMe">
+      <span>จำการเข้าสู่ระบบไว้ในเครื่องนี้</span>
+    </label>
+    <button id="loginBtn" type="button">
+      <span class="spinner-sm" id="loginSpinner"></span>
+      <span id="loginLabel">เข้าสู่ระบบ</span>
+    </button>
+  </div>
+  <div class="foot">ติดต่อผู้ดูแลระบบหากลืมรหัสผ่าน หรือยังไม่มีบัญชี</div>
+</div>
+
+<!-- ===== แอปหลัก (แสดงหลังเข้าสู่ระบบ) ===== -->
+<div class="app hide" id="app">
 <div class="wrap">
   <div class="brandbar">
     <div class="brandmark">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M3 7L12 3L21 7V17L12 21L3 17V7Z" stroke="#F6F4EE" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 7L12 11L21 7" stroke="#E8960A" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 11V21" stroke="#F6F4EE" stroke-width="1.6"/></svg>
+      <img class="brandlogo" src="logo.png" alt="TOA" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+      <span style="display:none;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none"><path d="M3 7L12 3L21 7V17L12 21L3 17V7Z" stroke="#FFFFFF" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 7L12 11L21 7" stroke="#F2B8A2" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 11V21" stroke="#FFFFFF" stroke-width="1.6"/></svg></span>
     </div>
     <div class="brandtext">
       <div class="eyebrow">Proof of Delivery</div>
       <h1>ค้นหาหลักฐานการจัดส่ง</h1>
     </div>
+  </div>
+
+  <div class="userbar">
+    <div class="who">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 20C4 16.6863 7.58172 14 12 14C16.4183 14 20 16.6863 20 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span id="whoami">-</span>
+    </div>
+    <button class="logoutBtn" id="logoutBtn" type="button">ออกจากระบบ</button>
   </div>
 
   <div class="searchcard">
@@ -92,6 +173,7 @@
   <div id="resultsLabel" class="resultsLabel" style="display:none;"></div>
   <div id="resultsArea"></div>
 </div>
+</div><!-- /.app -->
 
 <div class="overlay" id="overlay">
   <div class="modal">
@@ -159,6 +241,82 @@ async function callBackend(params){
   return data.results || [];
 }
 
+// ===== ระบบเข้าสู่ระบบ =====
+let session = null;
+const SESSION_KEY = 'pod_viewer_session';
+const loginwrap = document.getElementById('loginwrap');
+const appEl = document.getElementById('app');
+const loginUser = document.getElementById('loginUser');
+const loginPass = document.getElementById('loginPass');
+const loginBtn = document.getElementById('loginBtn');
+const loginErr = document.getElementById('loginErr');
+const loginSpinner = document.getElementById('loginSpinner');
+const loginLabel = document.getElementById('loginLabel');
+const whoami = document.getElementById('whoami');
+const rememberMe = document.getElementById('rememberMe');
+
+function showLoginErr(msg){ loginErr.textContent = msg; loginErr.classList.add('show'); }
+function clearLoginErr(){ loginErr.classList.remove('show'); loginErr.textContent=''; }
+
+function enterApp(sess){
+  session = sess;
+  whoami.textContent = sess.carrier;
+  loginwrap.classList.remove('show');
+  appEl.classList.remove('hide');
+  loadRecent();
+}
+function saveSession(sess, remember){
+  try {
+    if(remember){ localStorage.setItem(SESSION_KEY, JSON.stringify(sess)); sessionStorage.removeItem(SESSION_KEY); }
+    else { sessionStorage.setItem(SESSION_KEY, JSON.stringify(sess)); localStorage.removeItem(SESSION_KEY); }
+  } catch(e){}
+}
+function readSavedSession(){
+  try { const l = localStorage.getItem(SESSION_KEY); if(l){ return JSON.parse(l); } } catch(e){}
+  try { const s = sessionStorage.getItem(SESSION_KEY); if(s){ return JSON.parse(s); } } catch(e){}
+  return null;
+}
+function doLogout(){
+  session = null;
+  try { sessionStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_KEY); } catch(e){}
+  loginUser.value=''; loginPass.value=''; if(rememberMe) rememberMe.checked=false; clearLoginErr();
+  appEl.classList.add('hide');
+  loginwrap.classList.add('show');
+}
+async function doLogin(){
+  clearLoginErr();
+  const u = loginUser.value.trim();
+  const pw = loginPass.value;
+  if(!u || !pw){ showLoginErr('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'); return; }
+  if(pw.length < 4 || pw.length > 8){ showLoginErr('รหัสผ่านต้องมี 4-8 ตัวอักษร'); loginPass.focus(); return; }
+  if(!backendConfigured()){ showLoginErr('ยังไม่ได้ตั้งค่า Backend (ดูคู่มือตั้งค่า.md)'); return; }
+  loginBtn.disabled = true; loginSpinner.classList.add('show'); loginLabel.textContent='กำลังตรวจสอบ...';
+  try {
+    const res = await jsonp(APPS_SCRIPT_URL, { action: 'loginViewer', username: u, password: pw });
+    if(res && res.success){
+      const sess = { username: u, password: pw, carrier: res.carrier };
+      saveSession(sess, rememberMe && rememberMe.checked);
+      enterApp(sess);
+    } else {
+      showLoginErr((res && res.error) ? res.error : 'เข้าสู่ระบบไม่สำเร็จ');
+    }
+  } catch(err){
+    showLoginErr('เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่');
+  } finally {
+    loginBtn.disabled = false; loginSpinner.classList.remove('show'); loginLabel.textContent='เข้าสู่ระบบ';
+  }
+}
+loginBtn.addEventListener('click', doLogin);
+loginPass.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') doLogin(); });
+document.getElementById('logoutBtn').addEventListener('click', doLogout);
+
+(function restoreSession(){
+  const saved = readSavedSession();
+  if(saved){ enterApp(saved); }
+  else { loginwrap.classList.add('show'); appEl.classList.add('hide'); }
+})();
+
+// ===== ค้นหา / แสดงผล =====
 async function loadRecent(){
   if(!backendConfigured()){
     resultsArea.innerHTML = '<div class="empty"><p>ยังไม่ได้ตั้งค่า Backend</p><div class="sub">กรุณาใส่ APPS_SCRIPT_URL ในไฟล์นี้ก่อน (ดูคู่มือตั้งค่า.md)</div></div>';
@@ -174,7 +332,6 @@ async function loadRecent(){
     resultsArea.innerHTML = '<div class="empty"><p>โหลดข้อมูลไม่สำเร็จ</p><div class="sub">' + escapeHtml(e.message) + '</div></div>';
   }
 }
-
 async function doSearch(query){
   resultsArea.innerHTML = '<div class="loading"><div class="spinner"></div>กำลังค้นหา...</div>';
   try {
@@ -184,7 +341,6 @@ async function doSearch(query){
     resultsArea.innerHTML = '<div class="empty"><p>ค้นหาไม่สำเร็จ</p><div class="sub">' + escapeHtml(e.message) + '</div></div>';
   }
 }
-
 function renderResults(matches, label){
   resultsLabel.style.display = matches.length ? 'block' : 'none';
   resultsLabel.textContent = label;
@@ -254,8 +410,6 @@ document.getElementById('lbPrev').onclick = () => { currentImgIdx = (currentImgI
 document.getElementById('lbNext').onclick = () => { currentImgIdx = (currentImgIdx+1)%currentImages.length; updateLightbox(); };
 document.getElementById('lbClose').onclick = () => lightbox.classList.remove('show');
 lightbox.addEventListener('click', (e) => { if(e.target === lightbox) lightbox.classList.remove('show'); });
-
-loadRecent();
 </script>
 </body>
 </html>
