@@ -263,7 +263,7 @@ function enterApp(sess){
   whoami.textContent = sess.carrier;
   loginwrap.classList.remove('show');
   appEl.classList.remove('hide');
-  loadRecent();
+  showSearchPrompt();
 }
 function saveSession(sess, remember){
   try {
@@ -317,6 +317,17 @@ document.getElementById('logoutBtn').addEventListener('click', doLogout);
 })();
 
 // ===== ค้นหา / แสดงผล =====
+function showSearchPrompt(){
+  resultsLabel.style.display = 'none';
+  if(!backendConfigured()){
+    searchMeta.textContent = 'ยังไม่ได้เชื่อมต่อ Backend';
+    resultsArea.innerHTML = '<div class="empty"><p>ยังไม่ได้ตั้งค่า Backend</p><div class="sub">กรุณาใส่ APPS_SCRIPT_URL ในไฟล์นี้ก่อน (ดูคู่มือตั้งค่า.md)</div></div>';
+    return;
+  }
+  searchMeta.textContent = 'พิมพ์เลขที่บิลเพื่อค้นหา';
+  resultsArea.innerHTML = '<div class="empty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M20 20L16.65 16.65" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><p>ค้นหาด้วยเลขที่บิล</p><div class="sub">พิมพ์เลขที่บิลในช่องด้านบน เพื่อดูหลักฐานการจัดส่ง</div></div>';
+}
+
 async function loadRecent(){
   if(!backendConfigured()){
     resultsArea.innerHTML = '<div class="empty"><p>ยังไม่ได้ตั้งค่า Backend</p><div class="sub">กรุณาใส่ APPS_SCRIPT_URL ในไฟล์นี้ก่อน (ดูคู่มือตั้งค่า.md)</div></div>';
@@ -365,9 +376,9 @@ searchInput.addEventListener('input', () => {
   clearBtn.classList.toggle('show', searchInput.value.length > 0);
   clearTimeout(debounceTimer);
   const q = searchInput.value.trim();
-  debounceTimer = setTimeout(() => { if(q === ''){ loadRecent(); } else { doSearch(q); } }, 350);
+  debounceTimer = setTimeout(() => { if(q === ''){ showSearchPrompt(); } else { doSearch(q); } }, 350);
 });
-clearBtn.addEventListener('click', () => { searchInput.value=''; clearBtn.classList.remove('show'); loadRecent(); searchInput.focus(); });
+clearBtn.addEventListener('click', () => { searchInput.value=''; clearBtn.classList.remove('show'); showSearchPrompt(); searchInput.focus(); });
 
 const overlay = document.getElementById('overlay');
 const modalBill = document.getElementById('modalBill');
