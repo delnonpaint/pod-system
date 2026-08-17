@@ -8,17 +8,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#1B2430; --ink-soft:#2C3847; --paper:#F6F4EE; --paper-card:#FFFFFF;
-    --amber:#E8960A; --amber-deep:#C97C05; --stamp-green:#2E6B4F; --slate:#6B7680;
-    --line:#D9D4C6; --danger:#B3432E;
+    --ink:#47424E; --ink-soft:#6B6572; --paper:#F7F2F4; --paper-card:#FFFFFF;
+    --amber:#F2B8A2; --amber-deep:#C46A52; --stamp-green:#4E8A72; --slate:#8B8592;
+    --line:#ECE5E8; --danger:#C25E48;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{background:var(--paper);font-family:'Inter',system-ui,sans-serif;color:var(--ink);min-height:100vh;padding-bottom:110px;}
   .wrap{max-width:520px;margin:0 auto;padding:20px 16px 40px;}
   .brandbar{display:flex;align-items:center;gap:10px;padding:14px 4px 20px;}
-  .brandmark{width:38px;height:38px;border-radius:8px;background:var(--ink);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .brandmark{width:38px;height:38px;border-radius:8px;background:var(--ink);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;}
   .brandmark svg{width:20px;height:20px;}
+  .brandmark img.brandlogo,.loginbrand .mk img.brandlogo{width:100%;height:100%;object-fit:contain;padding:3px;background:#fff;}
   .brandtext{line-height:1.15;}
   .brandtext .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber-deep);font-weight:600;}
   .brandtext h1{font-family:'Oswald',sans-serif;font-weight:600;font-size:20px;margin:1px 0 0;letter-spacing:.01em;}
@@ -71,7 +72,7 @@
   .loginwrap.show{display:block;}
   .app.hide{display:none;}
   .loginbrand{text-align:center;margin-bottom:28px;}
-  .loginbrand .mk{width:56px;height:56px;border-radius:12px;background:var(--ink);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;}
+  .loginbrand .mk{width:56px;height:56px;border-radius:12px;background:var(--ink);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;overflow:hidden;}
   .loginbrand .mk svg{width:30px;height:30px;}
   .loginbrand .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber-deep);font-weight:600;}
   .loginbrand h1{font-family:'Oswald',sans-serif;font-weight:600;font-size:23px;margin:2px 0 0;}
@@ -102,7 +103,8 @@
 <div class="loginwrap" id="loginwrap">
   <div class="loginbrand">
     <div class="mk">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M3 7L12 3L21 7V17L12 21L3 17V7Z" stroke="#F6F4EE" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 7L12 11L21 7" stroke="#E8960A" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 11V21" stroke="#F6F4EE" stroke-width="1.6"/></svg>
+      <img class="brandlogo" src="logo.png" alt="TOA" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+      <span style="display:none;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none"><path d="M3 7L12 3L21 7V17L12 21L3 17V7Z" stroke="#FFFFFF" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 7L12 11L21 7" stroke="#F2B8A2" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 11V21" stroke="#FFFFFF" stroke-width="1.6"/></svg></span>
     </div>
     <div class="eyebrow">Proof of Delivery</div>
     <h1>เข้าสู่ระบบขนส่ง</h1>
@@ -134,7 +136,8 @@
 <div class="wrap">
   <div class="brandbar">
     <div class="brandmark">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M3 7L12 3L21 7V17L12 21L3 17V7Z" stroke="#F6F4EE" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 7L12 11L21 7" stroke="#E8960A" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 11V21" stroke="#F6F4EE" stroke-width="1.6"/></svg>
+      <img class="brandlogo" src="logo.png" alt="TOA" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+      <span style="display:none;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none"><path d="M3 7L12 3L21 7V17L12 21L3 17V7Z" stroke="#FFFFFF" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 7L12 11L21 7" stroke="#F2B8A2" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 11V21" stroke="#FFFFFF" stroke-width="1.6"/></svg></span>
     </div>
     <div class="brandtext">
       <div class="eyebrow">Proof of Delivery</div>
