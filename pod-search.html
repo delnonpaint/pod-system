@@ -74,7 +74,7 @@
   .lightbox{display:none;position:fixed;inset:0;background:rgba(40,36,44,.95);z-index:60;align-items:center;justify-content:center;flex-direction:column;padding:0;}
   .lightbox.show{display:flex;}
   .lbviewport{position:relative;width:100%;flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none;}
-  .lbviewport img{max-width:100%;max-height:100%;border-radius:6px;transform-origin:0 0;user-select:none;-webkit-user-drag:none;will-change:transform;transition:transform .05s linear;}
+  .lbviewport img{max-width:100%;max-height:100%;border-radius:6px;transform-origin:0 0;user-select:none;-webkit-user-drag:none;will-change:transform;}
   .lbviewport img.grabbing{cursor:grabbing;transition:none;}
   .lbviewport img.zoomable{cursor:zoom-in;}
   .lbviewport img.zoomed{cursor:grab;}
@@ -487,9 +487,10 @@ lbImg.addEventListener('dblclick', (e) => { e.preventDefault(); zScale > 1.01 ? 
 lbViewport.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.deltaY < 0 ? 1.15 : 1/1.15, e.clientX, e.clientY); }, {passive:false});
 
 let dragging=false, dragSX=0, dragSY=0, dragOX=0, dragOY=0;
+lbImg.addEventListener('dragstart', (e) => e.preventDefault()); // กันเบราว์เซอร์ลากรูปเอง (ทำให้ pan พัง)
 lbImg.addEventListener('mousedown', (e) => { if(zScale<=1.01) return; e.preventDefault(); dragging=true; dragSX=e.clientX; dragSY=e.clientY; dragOX=zX; dragOY=zY; lbImg.classList.add('grabbing'); });
-window.addEventListener('mousemove', (e) => { if(!dragging) return; zX=dragOX+(e.clientX-dragSX); zY=dragOY+(e.clientY-dragSY); clampPan(); applyTransform(); });
-window.addEventListener('mouseup', () => { dragging=false; lbImg.classList.remove('grabbing'); });
+window.addEventListener('mousemove', (e) => { if(!dragging) return; e.preventDefault(); zX=dragOX+(e.clientX-dragSX); zY=dragOY+(e.clientY-dragSY); clampPan(); applyTransform(); });
+window.addEventListener('mouseup', () => { if(dragging){ dragging=false; lbImg.classList.remove('grabbing'); } });
 
 // ---- Mobile: pinch ซูม, แตะสองครั้งสลับซูม, ลากนิ้วเลื่อน ----
 let touchMode=null, startDist=0, startScale=1, tStartX=0, tStartY=0, tOX=0, tOY=0, lastTap=0;
