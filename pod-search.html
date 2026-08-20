@@ -71,10 +71,15 @@
   .drow .v{font-weight:600;color:var(--ink);text-align:right;max-width:65%;}
   .notebox{margin:6px 20px 20px;background:#FBF6F8;border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:13.5px;color:var(--ink-soft);line-height:1.5;}
   .notebox .lbl{font-size:11px;color:var(--slate);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:4px;}
-  .lightbox{display:none;position:fixed;inset:0;background:rgba(40,36,44,.92);z-index:60;align-items:center;justify-content:center;flex-direction:column;padding:20px;}
+  .lightbox{display:none;position:fixed;inset:0;background:rgba(40,36,44,.95);z-index:60;align-items:center;justify-content:center;flex-direction:column;padding:0;}
   .lightbox.show{display:flex;}
-  .lightbox img{max-width:100%;max-height:78vh;border-radius:8px;}
-  .lbcontrols{display:flex;gap:16px;margin-top:18px;align-items:center;}
+  .lbviewport{position:relative;width:100%;flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none;}
+  .lbviewport img{max-width:100%;max-height:100%;border-radius:6px;transform-origin:0 0;user-select:none;-webkit-user-drag:none;will-change:transform;transition:transform .05s linear;}
+  .lbviewport img.grabbing{cursor:grabbing;transition:none;}
+  .lbviewport img.zoomable{cursor:zoom-in;}
+  .lbviewport img.zoomed{cursor:grab;}
+  .lbbar{flex-shrink:0;padding:14px 16px 18px;display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;}
+  .lbcontrols{display:flex;gap:16px;align-items:center;}
   .lbbtn{background:rgba(255,255,255,.15);border:none;color:#fff;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;}
   .lbclose{position:absolute;top:18px;right:18px;background:rgba(255,255,255,.15);color:#fff;border:none;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;}
   .lbcount{color:#D8D2D6;font-size:12.5px;font-family:'IBM Plex Mono',monospace;margin-top:10px;}
@@ -192,13 +197,19 @@
 
 <div class="lightbox" id="lightbox">
   <button class="lbclose" id="lbClose">&times;</button>
-  <img id="lbImg" src="">
-  <div class="lbcontrols">
-    <button class="lbbtn" id="lbPrev">&#8249;</button>
-    <a id="lbDownload" download="proof.jpg" target="_blank"><button class="lbbtn" type="button">&#8595;</button></a>
-    <button class="lbbtn" id="lbNext">&#8250;</button>
+  <div class="lbviewport" id="lbViewport">
+    <img id="lbImg" src="" class="zoomable" alt="">
   </div>
-  <div class="lbcount" id="lbCount"></div>
+  <div class="lbbar">
+    <div class="lbcontrols">
+      <button class="lbbtn" id="lbPrev" title="รูปก่อนหน้า">&#8249;</button>
+      <button class="lbbtn" id="lbZoomOut" title="ซูมออก">&#8722;</button>
+      <button class="lbbtn" id="lbZoomIn" title="ซูมเข้า">&#43;</button>
+      <a id="lbDownload" download="proof.jpg" target="_blank"><button class="lbbtn" type="button" title="ดาวน์โหลด">&#8595;</button></a>
+      <button class="lbbtn" id="lbNext" title="รูปถัดไป">&#8250;</button>
+    </div>
+    <div class="lbcount" id="lbCount"></div>
+  </div>
 </div>
 
 <script>
@@ -413,13 +424,111 @@ overlay.addEventListener('click', (e) => { if(e.target === overlay) overlay.clas
 
 const lightbox = document.getElementById('lightbox');
 const lbImg = document.getElementById('lbImg');
+const lbViewport = document.getElementById('lbViewport');
 const lbCount = document.getElementById('lbCount');
 const lbDownload = document.getElementById('lbDownload');
+
+// สถานะ zoom/pan
+let zScale = 1, zX = 0, zY = 0;
+const Z_MIN = 1, Z_MAX = 5;
+
+function applyTransform(){
+  lbImg.style.transform = 'translate(' + zX + 'px,' + zY + 'px) scale(' + zScale + ')';
+  lbImg.classList.toggle('zoomed', zScale > 1.01);
+  lbImg.classList.toggle('zoomable', zScale <= 1.01);
+}
+function resetZoom(){ zScale = 1; zX = 0; zY = 0; applyTransform(); }
+
+// จำกัดการเลื่อน (pan) ไม่ให้รูปหลุดขอบมากเกินไป
+function clampPan(){
+  const vp = lbViewport.getBoundingClientRect();
+  const iw = lbImg.clientWidth * zScale, ih = lbImg.clientHeight * zScale;
+  const maxX = Math.max(0, (iw - vp.width) / 2);
+  const maxY = Math.max(0, (ih - vp.height) / 2);
+  zX = Math.max(-maxX, Math.min(maxX, zX));
+  zY = Math.max(-maxY, Math.min(maxY, zY));
+}
+
+function zoomAt(factor, cx, cy){
+  const prev = zScale;
+  zScale = Math.max(Z_MIN, Math.min(Z_MAX, zScale * factor));
+  if(zScale === prev) return;
+  if(zScale <= 1.01){ resetZoom(); return; }
+  // ซูมโดยอิงจุดที่ผู้ใช้แตะ/คลิก (ให้จุดนั้นอยู่กับที่)
+  const vp = lbViewport.getBoundingClientRect();
+  const ox = (cx - vp.left - vp.width/2 - zX);
+  const oy = (cy - vp.top - vp.height/2 - zY);
+  const ratio = zScale / prev;
+  zX -= ox * (ratio - 1);
+  zY -= oy * (ratio - 1);
+  clampPan(); applyTransform();
+}
+
 function openLightbox(idx){ currentImgIdx = idx; updateLightbox(); lightbox.classList.add('show'); }
-function updateLightbox(){ lbImg.src = currentImages[currentImgIdx]; lbDownload.href = currentImages[currentImgIdx]; lbCount.textContent = (currentImgIdx+1) + ' / ' + currentImages.length; }
-document.getElementById('lbPrev').onclick = () => { currentImgIdx = (currentImgIdx-1+currentImages.length)%currentImages.length; updateLightbox(); };
-document.getElementById('lbNext').onclick = () => { currentImgIdx = (currentImgIdx+1)%currentImages.length; updateLightbox(); };
+function updateLightbox(){
+  lbImg.src = currentImages[currentImgIdx];
+  lbDownload.href = currentImages[currentImgIdx];
+  lbCount.textContent = (currentImgIdx+1) + ' / ' + currentImages.length;
+  resetZoom();
+}
+document.getElementById('lbPrev').onclick = (e) => { e.stopPropagation(); currentImgIdx = (currentImgIdx-1+currentImages.length)%currentImages.length; updateLightbox(); };
+document.getElementById('lbNext').onclick = (e) => { e.stopPropagation(); currentImgIdx = (currentImgIdx+1)%currentImages.length; updateLightbox(); };
 document.getElementById('lbClose').onclick = () => lightbox.classList.remove('show');
+
+// ปุ่มซูม (อิงกึ่งกลางจอ)
+document.getElementById('lbZoomIn').onclick = (e) => { e.stopPropagation(); const r=lbViewport.getBoundingClientRect(); zoomAt(1.4, r.left+r.width/2, r.top+r.height/2); };
+document.getElementById('lbZoomOut').onclick = (e) => { e.stopPropagation(); const r=lbViewport.getBoundingClientRect(); zoomAt(1/1.4, r.left+r.width/2, r.top+r.height/2); };
+
+// ปิดเมื่อกดพื้นหลังนอกรูป (เฉพาะตอนไม่ได้ซูม)
+lbViewport.addEventListener('click', (e) => { if(e.target === lbViewport && zScale <= 1.01) lightbox.classList.remove('show'); });
+
+// ---- Desktop: ดับเบิลคลิกสลับซูม, ล้อเมาส์ซูม, ลากเลื่อน ----
+lbImg.addEventListener('dblclick', (e) => { e.preventDefault(); zScale > 1.01 ? resetZoom() : zoomAt(2.2, e.clientX, e.clientY); });
+lbViewport.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.deltaY < 0 ? 1.15 : 1/1.15, e.clientX, e.clientY); }, {passive:false});
+
+let dragging=false, dragSX=0, dragSY=0, dragOX=0, dragOY=0;
+lbImg.addEventListener('mousedown', (e) => { if(zScale<=1.01) return; e.preventDefault(); dragging=true; dragSX=e.clientX; dragSY=e.clientY; dragOX=zX; dragOY=zY; lbImg.classList.add('grabbing'); });
+window.addEventListener('mousemove', (e) => { if(!dragging) return; zX=dragOX+(e.clientX-dragSX); zY=dragOY+(e.clientY-dragSY); clampPan(); applyTransform(); });
+window.addEventListener('mouseup', () => { dragging=false; lbImg.classList.remove('grabbing'); });
+
+// ---- Mobile: pinch ซูม, แตะสองครั้งสลับซูม, ลากนิ้วเลื่อน ----
+let touchMode=null, startDist=0, startScale=1, tStartX=0, tStartY=0, tOX=0, tOY=0, lastTap=0;
+function dist(t){ const dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY; return Math.hypot(dx,dy); }
+function mid(t){ return { x:(t[0].clientX+t[1].clientX)/2, y:(t[0].clientY+t[1].clientY)/2 }; }
+
+lbViewport.addEventListener('touchstart', (e) => {
+  if(e.touches.length === 2){
+    touchMode='pinch'; startDist=dist(e.touches); startScale=zScale;
+  } else if(e.touches.length === 1){
+    // ตรวจดับเบิลแท็บ
+    const now=Date.now();
+    if(now - lastTap < 300){
+      const t=e.touches[0];
+      zScale > 1.01 ? resetZoom() : zoomAt(2.4, t.clientX, t.clientY);
+      touchMode=null; lastTap=0; return;
+    }
+    lastTap=now;
+    if(zScale > 1.01){ touchMode='pan'; tStartX=e.touches[0].clientX; tStartY=e.touches[0].clientY; tOX=zX; tOY=zY; }
+    else { touchMode=null; }
+  }
+}, {passive:false});
+
+lbViewport.addEventListener('touchmove', (e) => {
+  if(touchMode==='pinch' && e.touches.length===2){
+    e.preventDefault();
+    const m=mid(e.touches);
+    const target=startScale * (dist(e.touches)/startDist);
+    const factor=target/zScale;
+    zoomAt(factor, m.x, m.y);
+  } else if(touchMode==='pan' && e.touches.length===1){
+    e.preventDefault();
+    zX=tOX+(e.touches[0].clientX-tStartX); zY=tOY+(e.touches[0].clientY-tStartY);
+    clampPan(); applyTransform();
+  }
+}, {passive:false});
+
+lbViewport.addEventListener('touchend', (e) => { if(e.touches.length===0) touchMode=null; });
+
 lightbox.addEventListener('click', (e) => { if(e.target === lightbox) lightbox.classList.remove('show'); });
 </script>
 </body>
