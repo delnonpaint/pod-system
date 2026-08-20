@@ -263,7 +263,7 @@ function enterApp(sess){
   whoami.textContent = sess.carrier;
   loginwrap.classList.remove('show');
   appEl.classList.remove('hide');
-  showSearchPrompt();
+  if(sess.viewAll){ loadRecent(); } else { showSearchPrompt(); }
 }
 function saveSession(sess, remember){
   try {
@@ -294,7 +294,7 @@ async function doLogin(){
   try {
     const res = await jsonp(APPS_SCRIPT_URL, { action: 'loginViewer', username: u, password: pw });
     if(res && res.success){
-      const sess = { username: u, password: pw, carrier: res.carrier };
+      const sess = { username: u, password: pw, carrier: res.carrier, viewAll: !!res.viewAll };
       saveSession(sess, rememberMe && rememberMe.checked);
       enterApp(sess);
     } else {
@@ -376,9 +376,9 @@ searchInput.addEventListener('input', () => {
   clearBtn.classList.toggle('show', searchInput.value.length > 0);
   clearTimeout(debounceTimer);
   const q = searchInput.value.trim();
-  debounceTimer = setTimeout(() => { if(q === ''){ showSearchPrompt(); } else { doSearch(q); } }, 350);
+  debounceTimer = setTimeout(() => { if(q === ''){ (session && session.viewAll) ? loadRecent() : showSearchPrompt(); } else { doSearch(q); } }, 350);
 });
-clearBtn.addEventListener('click', () => { searchInput.value=''; clearBtn.classList.remove('show'); showSearchPrompt(); searchInput.focus(); });
+clearBtn.addEventListener('click', () => { searchInput.value=''; clearBtn.classList.remove('show'); (session && session.viewAll) ? loadRecent() : showSearchPrompt(); searchInput.focus(); });
 
 const overlay = document.getElementById('overlay');
 const modalBill = document.getElementById('modalBill');
