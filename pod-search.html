@@ -354,12 +354,16 @@ async function loadRecent(){
     resultsArea.innerHTML = '<div class="empty"><p>โหลดข้อมูลไม่สำเร็จ</p><div class="sub">' + escapeHtml(e.message) + '</div></div>';
   }
 }
+let searchSeq = 0;
 async function doSearch(query){
+  const mySeq = ++searchSeq;
   resultsArea.innerHTML = '<div class="loading"><div class="spinner"></div>กำลังค้นหา...</div>';
   try {
     const results = await callBackend({ action: 'search', billNo: query });
+    if(mySeq !== searchSeq) return; // มีการค้นหาใหม่กว่าแล้ว ทิ้งผลเก่านี้ไป
     renderResults(results, 'พบ ' + results.length + ' รายการ');
   } catch(e){
+    if(mySeq !== searchSeq) return;
     resultsArea.innerHTML = '<div class="empty"><p>ค้นหาไม่สำเร็จ</p><div class="sub">' + escapeHtml(e.message) + '</div></div>';
   }
 }
@@ -374,7 +378,7 @@ function renderResults(matches, label){
   matches.forEach(item => {
     const row = document.createElement('div');
     row.className = 'rowcard';
-    row.innerHTML = '<div class="rowicon">' + (item.carrier||'?').slice(0,2).toUpperCase() + '</div>'
+    row.innerHTML = '<div class="rowicon">' + escapeHtml((item.carrier||'?').slice(0,2).toUpperCase()) + '</div>'
       + '<div class="rowmain"><div class="rowbill">' + escapeHtml(item.billNo||'-') + '</div>'
       + '<div class="rowsub">' + escapeHtml(item.carrier||'-') + ' · ' + fmtDate(item.deliveryDate) + '</div></div>'
       + '<div class="rowarrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
@@ -398,25 +402,34 @@ const detailRows = document.getElementById('detailRows');
 const noteBox = document.getElementById('noteBox');
 const noteText = document.getElementById('noteText');
 
-function openDetail(item){
+async function openDetail(item){
   overlay.classList.add('show');
   modalBill.textContent = item.billNo || '-';
   noteBox.style.display = 'none';
-  currentImages = item.images || [];
-  modalGrid.innerHTML = '';
-  if(currentImages.length === 0){
-    modalGrid.innerHTML = '<div class="empty" style="grid-column:1/-1;">ไม่พบรูปภาพสำหรับรายการนี้</div>';
-  } else {
-    currentImages.forEach((src, i) => {
-      const img = document.createElement('img'); img.src = src; img.loading='lazy';
-      img.onclick = () => openLightbox(i); modalGrid.appendChild(img);
-    });
-  }
+  currentImages = [];
   detailRows.innerHTML = '<div class="drow"><div class="k">ขนส่ง</div><div class="v">' + escapeHtml(item.carrier||'-') + '</div></div>'
     + '<div class="drow"><div class="k">เลขที่บิล</div><div class="v">' + escapeHtml(item.billNo||'-') + '</div></div>'
     + '<div class="drow"><div class="k">วันที่ส่งงาน</div><div class="v">' + fmtDate(item.deliveryDate) + '</div></div>'
     + '<div class="drow"><div class="k">เวลาที่แนบเข้าระบบ</div><div class="v">' + fmtDateTime(item.timestamp) + '</div></div>';
   if(item.note){ noteBox.style.display='block'; noteText.textContent = item.note; }
+
+  // โหลดรูปเฉพาะบิลนี้ (on-demand) เพื่อความเร็ว
+  modalGrid.innerHTML = '<div class="loading" style="grid-column:1/-1;"><div class="spinner"></div>กำลังโหลดรูปภาพ...</div>';
+  try {
+    const data = await jsonp(APPS_SCRIPT_URL, { action: 'detail', refCode: item.refCode });
+    currentImages = (data && data.images) ? data.images : [];
+    modalGrid.innerHTML = '';
+    if(currentImages.length === 0){
+      modalGrid.innerHTML = '<div class="empty" style="grid-column:1/-1;">ไม่พบรูปภาพสำหรับรายการนี้</div>';
+    } else {
+      currentImages.forEach((src, i) => {
+        const img = document.createElement('img'); img.src = src; img.loading='lazy';
+        img.onclick = () => openLightbox(i); modalGrid.appendChild(img);
+      });
+    }
+  } catch(e){
+    modalGrid.innerHTML = '<div class="empty" style="grid-column:1/-1;">โหลดรูปไม่สำเร็จ กรุณาลองใหม่</div>';
+  }
 }
 
 document.getElementById('closeModal').onclick = () => overlay.classList.remove('show');
