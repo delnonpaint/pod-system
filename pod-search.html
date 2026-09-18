@@ -108,6 +108,11 @@
   .spinner-sm{width:16px;height:16px;border-radius:50%;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite;display:none;}
   .spinner-sm.show{display:inline-block;}
   .foot{text-align:center;margin-top:18px;font-size:11.5px;color:var(--slate);}
+  .pagenav{display:flex;align-items:center;justify-content:center;gap:14px;margin:18px 0 6px;}
+  .pgbtn{background:var(--paper-card);border:1.5px solid var(--line);border-radius:9px;padding:9px 16px;font-family:'Inter',sans-serif;font-size:13.5px;font-weight:600;color:var(--ink);cursor:pointer;transition:border-color .12s ease;}
+  .pgbtn:hover:not(:disabled){border-color:var(--amber);}
+  .pgbtn:disabled{opacity:.4;cursor:not-allowed;}
+  .pginfo{font-size:13px;color:var(--slate);font-family:'IBM Plex Mono',monospace;font-weight:600;min-width:80px;text-align:center;}
 </style>
 </head>
 <body>
@@ -249,7 +254,7 @@ function jsonp(url, params){
 async function callBackend(params){
   const data = await jsonp(APPS_SCRIPT_URL, params);
   if(!data || !data.success){ throw new Error((data && data.error) || 'เรียกข้อมูลไม่สำเร็จ'); }
-  return data.results || [];
+  return data; // คืนทั้งก้อน (results, page, totalPages, totalCount)
 }
 
 // ===== ระบบเข้าสู่ระบบ =====
@@ -329,6 +334,7 @@ document.getElementById('logoutBtn').addEventListener('click', doLogout);
 
 // ===== ค้นหา / แสดงผล =====
 function showSearchPrompt(){
+  viewState = { mode: 'prompt', query: '', page: 1, totalPages: 1 };
   resultsLabel.style.display = 'none';
   if(!backendConfigured()){
     searchMeta.textContent = 'ยังไม่ได้เชื่อมต่อ Backend';
@@ -339,35 +345,55 @@ function showSearchPrompt(){
   resultsArea.innerHTML = '<div class="empty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M20 20L16.65 16.65" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><p>ค้นหาด้วยเลขที่บิล</p><div class="sub">พิมพ์เลขที่บิลในช่องด้านบน เพื่อดูหลักฐานการจัดส่ง</div></div>';
 }
 
-async function loadRecent(){
+// สถานะมุมมองปัจจุบัน (ใช้กับการแบ่งหน้า)
+let viewState = { mode: 'prompt', query: '', page: 1, totalPages: 1 };
+
+async function loadRecent(page){
   if(!backendConfigured()){
     resultsArea.innerHTML = '<div class="empty"><p>ยังไม่ได้ตั้งค่า Backend</p><div class="sub">กรุณาใส่ APPS_SCRIPT_URL ในไฟล์นี้ก่อน (ดูคู่มือตั้งค่า.md)</div></div>';
     searchMeta.textContent = 'ยังไม่ได้เชื่อมต่อ Backend';
     return;
   }
+  const p = page || 1;
+  viewState = { mode: 'recent', query: '', page: p, totalPages: 1 };
   resultsArea.innerHTML = '<div class="loading"><div class="spinner"></div>กำลังโหลดข้อมูล...</div>';
   try {
-    const results = await callBackend({ action: 'recent' });
-    searchMeta.textContent = 'แสดงรายการล่าสุด';
-    renderResults(results, 'รายการล่าสุด');
+    const data = await callBackend({ action: 'recent', page: p });
+    if(viewState.mode !== 'recent' || viewState.page !== p) return;
+    viewState.totalPages = data.totalPages || 1;
+    searchMeta.textContent = 'รายการล่าสุด · ทั้งหมด ' + (data.totalCount||0) + ' รายการ';
+    renderResults(data.results || [], 'รายการล่าสุด', data);
   } catch(e){
     resultsArea.innerHTML = '<div class="empty"><p>โหลดข้อมูลไม่สำเร็จ</p><div class="sub">' + escapeHtml(e.message) + '</div></div>';
   }
 }
+
 let searchSeq = 0;
-async function doSearch(query){
+async function doSearch(query, page){
+  const p = page || 1;
   const mySeq = ++searchSeq;
+  viewState = { mode: 'search', query: query, page: p, totalPages: 1 };
   resultsArea.innerHTML = '<div class="loading"><div class="spinner"></div>กำลังค้นหา...</div>';
   try {
-    const results = await callBackend({ action: 'search', billNo: query });
+    const data = await callBackend({ action: 'search', billNo: query, page: p });
     if(mySeq !== searchSeq) return; // มีการค้นหาใหม่กว่าแล้ว ทิ้งผลเก่านี้ไป
-    renderResults(results, 'พบ ' + results.length + ' รายการ');
+    viewState.totalPages = data.totalPages || 1;
+    searchMeta.textContent = 'พบ ' + (data.totalCount||0) + ' รายการ';
+    renderResults(data.results || [], 'พบ ' + (data.totalCount||0) + ' รายการ', data);
   } catch(e){
     if(mySeq !== searchSeq) return;
     resultsArea.innerHTML = '<div class="empty"><p>ค้นหาไม่สำเร็จ</p><div class="sub">' + escapeHtml(e.message) + '</div></div>';
   }
 }
-function renderResults(matches, label){
+
+// ไปหน้าถัดไป/ก่อนหน้า ตามโหมดปัจจุบัน
+function gotoPage(p){
+  if(viewState.mode === 'recent'){ loadRecent(p); }
+  else if(viewState.mode === 'search'){ doSearch(viewState.query, p); }
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function renderResults(matches, label, data){
   resultsLabel.style.display = matches.length ? 'block' : 'none';
   resultsLabel.textContent = label;
   if(matches.length === 0){
@@ -385,6 +411,20 @@ function renderResults(matches, label){
     row.onclick = () => openDetail(item);
     resultsArea.appendChild(row);
   });
+  // แถบแบ่งหน้า
+  if(data && data.totalPages > 1){
+    const nav = document.createElement('div');
+    nav.className = 'pagenav';
+    const cur = data.page || 1, tot = data.totalPages;
+    nav.innerHTML =
+      '<button class="pgbtn" ' + (cur<=1?'disabled':'') + ' id="pgPrev">‹ ก่อนหน้า</button>'
+      + '<span class="pginfo">หน้า ' + cur + ' / ' + tot + '</span>'
+      + '<button class="pgbtn" ' + (cur>=tot?'disabled':'') + ' id="pgNext">ถัดไป ›</button>';
+    resultsArea.appendChild(nav);
+    const prev = document.getElementById('pgPrev'), next = document.getElementById('pgNext');
+    if(prev && cur>1) prev.onclick = () => gotoPage(cur-1);
+    if(next && cur<tot) next.onclick = () => gotoPage(cur+1);
+  }
 }
 
 searchInput.addEventListener('input', () => {
