@@ -116,6 +116,9 @@
   .pgbtn:hover:not(:disabled){border-color:var(--amber);}
   .pgbtn:disabled{opacity:.4;cursor:not-allowed;}
   .pginfo{font-size:13px;color:var(--slate);font-family:'IBM Plex Mono',monospace;font-weight:600;min-width:80px;text-align:center;}
+  .archbtn{display:inline-block;margin-top:16px;background:var(--ink);color:#fff;border:none;border-radius:10px;padding:11px 22px;font-family:'Oswald',sans-serif;font-size:15px;font-weight:600;cursor:pointer;}
+  .archbtn:active{transform:scale(.98);}
+  .archtag{display:inline-block;font-size:10px;font-weight:700;color:var(--amber-deep);background:#FBEDE8;border-radius:5px;padding:2px 6px;margin-left:6px;vertical-align:middle;font-family:'Inter',sans-serif;}
 </style>
 </head>
 <body>
@@ -245,7 +248,7 @@ function jsonp(url, params){
   return new Promise((resolve, reject) => {
     const cbName = 'jsonp_cb_' + Date.now() + '_' + Math.floor(Math.random()*1e6);
     const script = document.createElement('script');
-    const timer = setTimeout(() => { cleanup(); reject(new Error('หมดเวลารอการตอบกลับ')); }, 15000);
+    const timer = setTimeout(() => { cleanup(); reject(new Error('หมดเวลารอการตอบกลับ')); }, 30000);
     function cleanup(){ delete window[cbName]; script.remove(); clearTimeout(timer); }
     window[cbName] = (data) => { cleanup(); resolve(data); };
     const qs = new URLSearchParams(Object.assign({}, params, { callback: cbName })).toString();
@@ -380,8 +383,9 @@ async function doSearch(query, page){
   try {
     const data = await callBackend({ action: 'search', billNo: query, page: p });
     if(mySeq !== searchSeq) return; // มีการค้นหาใหม่กว่าแล้ว ทิ้งผลเก่านี้ไป
+    data.__query = query; // เก็บคำค้นไว้ให้ปุ่ม "ค้นในคลังเก่า" ใช้
     viewState.totalPages = data.totalPages || 1;
-    searchMeta.textContent = 'พบ ' + (data.totalCount||0) + ' รายการ';
+    searchMeta.textContent = 'พบ ' + (data.totalCount||0) + ' รายการ (30 วันล่าสุด)';
     renderResults(data.results || [], 'พบ ' + (data.totalCount||0) + ' รายการ', data);
   } catch(e){
     if(mySeq !== searchSeq) return;
@@ -389,26 +393,56 @@ async function doSearch(query, page){
   }
 }
 
+// ค้นในคลังเก่า (ข้อมูลเก่ากว่า 30 วัน)
+async function doSearchArchive(query, page){
+  const p = page || 1;
+  const mySeq = ++searchSeq;
+  viewState = { mode: 'archive', query: query, page: p, totalPages: 1 };
+  resultsArea.innerHTML = '<div class="loading"><div class="spinner"></div>กำลังค้นในคลังเก่า... (อาจใช้เวลาสักครู่)</div>';
+  try {
+    const data = await callBackend({ action: 'searchArchive', billNo: query, page: p });
+    if(mySeq !== searchSeq) return;
+    viewState.totalPages = data.totalPages || 1;
+    searchMeta.textContent = '📦 คลังเก่า · พบ ' + (data.totalCount||0) + ' รายการ';
+    renderResults(data.results || [], '📦 ผลจากคลังเก่า · พบ ' + (data.totalCount||0) + ' รายการ', data, true);
+  } catch(e){
+    if(mySeq !== searchSeq) return;
+    resultsArea.innerHTML = '<div class="empty"><p>ค้นในคลังเก่าไม่สำเร็จ</p><div class="sub">' + escapeHtml(e.message) + '</div></div>';
+  }
+}
+
 // ไปหน้าถัดไป/ก่อนหน้า ตามโหมดปัจจุบัน
 function gotoPage(p){
   if(viewState.mode === 'recent'){ loadRecent(p); }
   else if(viewState.mode === 'search'){ doSearch(viewState.query, p); }
+  else if(viewState.mode === 'archive'){ doSearchArchive(viewState.query, p); }
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
-function renderResults(matches, label, data){
+function renderResults(matches, label, data, isArchive){
   resultsLabel.style.display = matches.length ? 'block' : 'none';
   resultsLabel.textContent = label;
   if(matches.length === 0){
-    resultsArea.innerHTML = '<div class="empty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M20 20L16.65 16.65" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><p>ไม่พบเลขที่บิลนี้ในระบบ</p><div class="sub">ลองตรวจสอบเลขที่บิลอีกครั้ง หรืออาจยังไม่มีขนส่งแนบหลักฐานเข้ามา</div></div>';
+    let html = '<div class="empty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M20 20L16.65 16.65" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+    if(isArchive){
+      html += '<p>ไม่พบเลขที่บิลนี้ในคลังเก่า</p><div class="sub">ลองตรวจสอบเลขที่บิลอีกครั้ง</div>';
+    } else {
+      html += '<p>ไม่พบในรายการ 30 วันล่าสุด</p><div class="sub">บิลนี้อาจเก่ากว่า 30 วัน ลองค้นในคลังเก่าดู</div>';
+      html += '<button class="archbtn" id="archBtn">📦 ค้นในคลังเก่า</button>';
+    }
+    html += '</div>';
+    resultsArea.innerHTML = html;
+    const ab = document.getElementById('archBtn');
+    if(ab && data && data.__query !== undefined){ ab.onclick = () => doSearchArchive(data.__query, 1); }
     return;
   }
   resultsArea.innerHTML = '';
   matches.forEach(item => {
+    if(isArchive){ item.__archive = true; }
     const row = document.createElement('div');
     row.className = 'rowcard';
     row.innerHTML = '<div class="rowicon">' + escapeHtml((item.carrier||'?').slice(0,2).toUpperCase()) + '</div>'
-      + '<div class="rowmain"><div class="rowbill">' + escapeHtml(item.billNo||'-') + '</div>'
+      + '<div class="rowmain"><div class="rowbill">' + escapeHtml(item.billNo||'-') + (isArchive?' <span class="archtag">คลังเก่า</span>':'') + '</div>'
       + '<div class="rowsub">' + escapeHtml(item.carrier||'-') + ' · ' + fmtDate(item.deliveryDate) + '</div></div>'
       + '<div class="rowarrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
     row.onclick = () => openDetail(item);
@@ -459,7 +493,9 @@ async function openDetail(item){
   // โหลดรูปเฉพาะบิลนี้ (on-demand) เพื่อความเร็ว
   modalGrid.innerHTML = '<div class="loading" style="grid-column:1/-1;"><div class="spinner"></div>กำลังโหลดรูปภาพ...</div>';
   try {
-    const data = await jsonp(APPS_SCRIPT_URL, { action: 'detail', refCode: item.refCode });
+    const detailParams = { action: 'detail', refCode: item.refCode };
+    if(item.__archive){ detailParams.source = 'archive'; }
+    const data = await jsonp(APPS_SCRIPT_URL, detailParams);
     currentImages = (data && data.images) ? data.images : [];
     modalGrid.innerHTML = '';
     if(currentImages.length === 0){
