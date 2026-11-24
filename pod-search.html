@@ -77,7 +77,7 @@
   .lightbox{display:none;position:fixed;inset:0;background:rgba(40,36,44,.95);z-index:60;align-items:center;justify-content:center;flex-direction:column;padding:0;}
   .lightbox.show{display:flex;}
   .lbviewport{position:relative;width:100%;flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none;}
-  .lbviewport img{max-width:100%;max-height:100%;border-radius:6px;transform-origin:0 0;user-select:none;-webkit-user-drag:none;will-change:transform;}
+  .lbviewport img{max-width:100%;max-height:100%;border-radius:6px;transform-origin:50% 50%;user-select:none;-webkit-user-drag:none;will-change:transform;}
   .lbviewport img.grabbing{cursor:grabbing;transition:none;}
   .lbviewport img.zoomable{cursor:zoom-in;}
   .lbviewport img.zoomed{cursor:grab;}
@@ -141,10 +141,10 @@
     </div>
     <div class="field">
       <label>รหัสผ่าน</label>
-      <input type="password" id="loginPass" autocomplete="current-password" placeholder="รหัสผ่าน 4-8 ตัว" maxlength="8">
+      <input type="password" id="loginPass" autocomplete="current-password" placeholder="รหัสผ่าน">
     </div>
     <label class="rememberrow">
-      <input type="checkbox" id="rememberMe">
+      <input type="checkbox" id="rememberMe" checked>
       <span>จำการเข้าสู่ระบบไว้ในเครื่องนี้</span>
     </label>
     <button id="loginBtn" type="button">
@@ -242,6 +242,11 @@ const resultsLabel = document.getElementById('resultsLabel');
 function fmtDate(iso){ if(!iso) return '-'; const d=new Date(iso+'T00:00:00'); if(isNaN(d)) return iso; return d.toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'numeric'}); }
 function fmtDateTime(iso){ if(!iso) return '-'; const d=new Date(iso); return d.toLocaleString('th-TH',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
 function escapeHtml(s){ const d=document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function driveId(url){ const m = String(url||'').match(/[?&]id=([^&]+)/) || String(url||'').match(/\/d\/([^/=?]+)/); return m ? m[1] : ''; }
+// ถ้าลิงก์ thumbnail โหลดไม่ขึ้น (บางเบราว์เซอร์) ลองลิงก์สำรองของ Google
+function addImgFallback(img){ img.onerror = function(){ const id = driveId(img.src); if(id && img.src.indexOf('googleusercontent') < 0){ img.src = 'https://lh3.googleusercontent.com/d/' + id + '=w1200'; } else { img.onerror = null; } }; }
+// ลิงก์ดาวน์โหลดไฟล์ต้นฉบับ (ไม่ใช่ thumbnail)
+function originalUrl(url){ const id = driveId(url); return id ? 'https://drive.google.com/uc?export=download&id=' + id : url; }
 function backendConfigured(){ return APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('script.google.com') > -1; }
 
 function jsonp(url, params){
@@ -301,7 +306,8 @@ function readSavedSession(){
 function doLogout(){
   session = null;
   try { sessionStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_KEY); } catch(e){}
-  loginUser.value=''; loginPass.value=''; if(rememberMe) rememberMe.checked=false; clearLoginErr();
+  loginUser.value=''; loginPass.value=''; if(rememberMe) rememberMe.checked=true; clearLoginErr();
+  searchInput.value=''; clearBtn.classList.remove('show'); ++searchSeq;
   appEl.classList.add('hide');
   loginwrap.classList.add('show');
 }
@@ -310,7 +316,6 @@ async function doLogin(){
   const u = loginUser.value.trim();
   const pw = loginPass.value;
   if(!u || !pw){ showLoginErr('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'); return; }
-  if(pw.length < 4 || pw.length > 8){ showLoginErr('รหัสผ่านต้องมี 4-8 ตัวอักษร'); loginPass.focus(); return; }
   if(!backendConfigured()){ showLoginErr('ยังไม่ได้ตั้งค่า Backend (ดูคู่มือตั้งค่า.md)'); return; }
   loginBtn.disabled = true; loginSpinner.classList.add('show'); loginLabel.textContent='กำลังตรวจสอบ...';
   try {
@@ -330,16 +335,13 @@ async function doLogin(){
 }
 loginBtn.addEventListener('click', doLogin);
 loginPass.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') doLogin(); });
+loginUser.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ loginPass.value ? doLogin() : loginPass.focus(); } });
 document.getElementById('logoutBtn').addEventListener('click', doLogout);
 
-(function restoreSession(){
-  const saved = readSavedSession();
-  if(saved){ enterApp(saved); }
-  else { loginwrap.classList.add('show'); appEl.classList.add('hide'); }
-})();
 
 // ===== ค้นหา / แสดงผล =====
 function showSearchPrompt(){
+  ++searchSeq;
   viewState = { mode: 'prompt', query: '', page: 1, totalPages: 1 };
   resultsLabel.style.display = 'none';
   if(!backendConfigured()){
@@ -353,6 +355,8 @@ function showSearchPrompt(){
 
 // สถานะมุมมองปัจจุบัน (ใช้กับการแบ่งหน้า)
 let viewState = { mode: 'prompt', query: '', page: 1, totalPages: 1 };
+let searchSeq = 0;
+let archiveDays = 30; // อัปเดตจาก backend
 
 async function loadRecent(page){
   if(!backendConfigured()){
@@ -361,6 +365,7 @@ async function loadRecent(page){
     return;
   }
   const p = page || 1;
+  ++searchSeq;
   viewState = { mode: 'recent', query: '', page: p, totalPages: 1 };
   resultsArea.innerHTML = '<div class="loading"><div class="spinner"></div>กำลังโหลดข้อมูล...</div>';
   try {
@@ -374,7 +379,6 @@ async function loadRecent(page){
   }
 }
 
-let searchSeq = 0;
 async function doSearch(query, page){
   const p = page || 1;
   const mySeq = ++searchSeq;
@@ -383,9 +387,12 @@ async function doSearch(query, page){
   try {
     const data = await callBackend({ action: 'search', billNo: query, page: p });
     if(mySeq !== searchSeq) return; // มีการค้นหาใหม่กว่าแล้ว ทิ้งผลเก่านี้ไป
-    data.__query = query; // เก็บคำค้นไว้ให้ปุ่ม "ค้นในคลังเก่า" ใช้
+    data.__query = query;
+    if(data.days) archiveDays = data.days;
+    // ไม่เจอในชีตหลัก -> ค้นในคลังเก่าให้อัตโนมัติ ไม่ต้องกดปุ่ม
+    if(!data.totalCount && p === 1){ doSearchArchive(query, 1, true); return; }
     viewState.totalPages = data.totalPages || 1;
-    searchMeta.textContent = 'พบ ' + (data.totalCount||0) + ' รายการ (30 วันล่าสุด)';
+    searchMeta.textContent = 'พบ ' + (data.totalCount||0) + ' รายการ (' + archiveDays + ' วันล่าสุด)';
     renderResults(data.results || [], 'พบ ' + (data.totalCount||0) + ' รายการ', data);
   } catch(e){
     if(mySeq !== searchSeq) return;
@@ -394,11 +401,11 @@ async function doSearch(query, page){
 }
 
 // ค้นในคลังเก่า (ข้อมูลเก่ากว่า 30 วัน)
-async function doSearchArchive(query, page){
+async function doSearchArchive(query, page, auto){
   const p = page || 1;
   const mySeq = ++searchSeq;
   viewState = { mode: 'archive', query: query, page: p, totalPages: 1 };
-  resultsArea.innerHTML = '<div class="loading"><div class="spinner"></div>กำลังค้นในคลังเก่า... (อาจใช้เวลาสักครู่)</div>';
+  resultsArea.innerHTML = '<div class="loading"><div class="spinner"></div>' + (auto ? 'ไม่พบใน ' + archiveDays + ' วันล่าสุด กำลังค้นในคลังเก่าให้... ' : 'กำลังค้นในคลังเก่า... ') + '(อาจใช้เวลาสักครู่)</div>';
   try {
     const data = await callBackend({ action: 'searchArchive', billNo: query, page: p });
     if(mySeq !== searchSeq) return;
@@ -425,9 +432,9 @@ function renderResults(matches, label, data, isArchive){
   if(matches.length === 0){
     let html = '<div class="empty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M20 20L16.65 16.65" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
     if(isArchive){
-      html += '<p>ไม่พบเลขที่บิลนี้ในคลังเก่า</p><div class="sub">ลองตรวจสอบเลขที่บิลอีกครั้ง</div>';
+      html += '<p>ไม่พบเลขที่บิลนี้</p><div class="sub">ค้นแล้วทั้ง ' + archiveDays + ' วันล่าสุดและคลังเก่า ลองตรวจสอบเลขที่บิลอีกครั้ง</div>';
     } else {
-      html += '<p>ไม่พบในรายการ 30 วันล่าสุด</p><div class="sub">บิลนี้อาจเก่ากว่า 30 วัน ลองค้นในคลังเก่าดู</div>';
+      html += '<p>ไม่พบในรายการ ' + archiveDays + ' วันล่าสุด</p><div class="sub">บิลนี้อาจเก่ากว่า ' + archiveDays + ' วัน ลองค้นในคลังเก่าดู</div>';
       html += '<button class="archbtn" id="archBtn">📦 ค้นในคลังเก่า</button>';
     }
     html += '</div>';
@@ -479,7 +486,9 @@ const detailRows = document.getElementById('detailRows');
 const noteBox = document.getElementById('noteBox');
 const noteText = document.getElementById('noteText');
 
+let detailSeq = 0;
 async function openDetail(item){
+  const mySeq = ++detailSeq;
   overlay.classList.add('show');
   modalBill.textContent = item.billNo || '-';
   noteBox.style.display = 'none';
@@ -496,17 +505,19 @@ async function openDetail(item){
     const detailParams = { action: 'detail', refCode: item.refCode };
     if(item.__archive){ detailParams.source = 'archive'; }
     const data = await jsonp(APPS_SCRIPT_URL, detailParams);
+    if(mySeq !== detailSeq) return; // เปิดบิลอื่นไปแล้ว
     currentImages = (data && data.images) ? data.images : [];
     modalGrid.innerHTML = '';
     if(currentImages.length === 0){
       modalGrid.innerHTML = '<div class="empty" style="grid-column:1/-1;">ไม่พบรูปภาพสำหรับรายการนี้</div>';
     } else {
       currentImages.forEach((src, i) => {
-        const img = document.createElement('img'); img.src = src; img.loading='lazy';
+        const img = document.createElement('img'); img.src = src; img.loading='lazy'; addImgFallback(img);
         img.onclick = () => openLightbox(i); modalGrid.appendChild(img);
       });
     }
   } catch(e){
+    if(mySeq !== detailSeq) return;
     modalGrid.innerHTML = '<div class="empty" style="grid-column:1/-1;">โหลดรูปไม่สำเร็จ กรุณาลองใหม่</div>';
   }
 }
@@ -558,8 +569,9 @@ function zoomAt(factor, cx, cy){
 
 function openLightbox(idx){ currentImgIdx = idx; updateLightbox(); lightbox.classList.add('show'); }
 function updateLightbox(){
+  addImgFallback(lbImg);
   lbImg.src = currentImages[currentImgIdx];
-  lbDownload.href = currentImages[currentImgIdx];
+  lbDownload.href = originalUrl(currentImages[currentImgIdx]);
   lbCount.textContent = (currentImgIdx+1) + ' / ' + currentImages.length;
   resetZoom();
 }
@@ -623,6 +635,37 @@ lbViewport.addEventListener('touchmove', (e) => {
 lbViewport.addEventListener('touchend', (e) => { if(e.touches.length===0) touchMode=null; });
 
 lightbox.addEventListener('click', (e) => { if(e.target === lightbox) lightbox.classList.remove('show'); });
+
+// คีย์บอร์ด: Esc ปิด, ลูกศรซ้าย/ขวา เปลี่ยนรูป
+document.addEventListener('keydown', (e) => {
+  if(lightbox.classList.contains('show')){
+    if(e.key === 'Escape') lightbox.classList.remove('show');
+    else if(e.key === 'ArrowLeft') document.getElementById('lbPrev').click();
+    else if(e.key === 'ArrowRight') document.getElementById('lbNext').click();
+  } else if(overlay.classList.contains('show') && e.key === 'Escape'){
+    overlay.classList.remove('show');
+  }
+});
+(function restoreSession(){
+  const saved = readSavedSession();
+  if(saved){
+    enterApp(saved);
+    // อัปเดตชื่อ/สิทธิ์ ViewAll ล่าสุดจากชีตแบบเงียบๆ (ถ้าแอดมินเปลี่ยนในชีต)
+    if(backendConfigured() && saved.username){
+      jsonp(APPS_SCRIPT_URL, { action: 'loginViewer', username: saved.username, password: saved.password || '' })
+        .then(res => {
+          if(!res || !res.success || session !== saved) return;
+          const changed = (res.carrier !== saved.carrier) || (!!res.viewAll !== !!saved.viewAll);
+          if(!changed) return;
+          const sess = Object.assign({}, saved, { carrier: res.carrier, viewAll: !!res.viewAll });
+          saveSession(sess, !!localStorage.getItem(SESSION_KEY));
+          session = sess; whoami.textContent = sess.carrier;
+          if(viewState.mode === 'prompt' || viewState.mode === 'recent'){ sess.viewAll ? loadRecent() : showSearchPrompt(); }
+        }).catch(() => {});
+    }
+  }
+  else { loginwrap.classList.add('show'); appEl.classList.add('hide'); }
+})();
 </script>
 </body>
 </html>
